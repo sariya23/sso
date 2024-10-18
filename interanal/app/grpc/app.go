@@ -40,7 +40,7 @@ func (a *GrpcApp) run() error {
 		logger.Error(err.Error())
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	logger.Info("gepc server is running", slog.String("port", l.Addr().String()))
+	logger.Info("gepc server is running", slog.String("addr", l.Addr().String()))
 
 	if err := a.grpcServer.Serve(l); err != nil {
 		logger.Error(err.Error())

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sso/interanal/app"
 	"sso/interanal/config"
 )
 
@@ -23,6 +24,9 @@ func main() {
 		"starting application",
 		slog.String("with config", fmt.Sprintf("%+v", config)),
 	)
+
+	grpcApp := app.New(logger, config.GRPC.Port, "localhost@blalala", config.TokenTTL)
+	grpcApp.GrpcServer.MustRun()
 }
 
 func setupLogger(env string) *slog.Logger {

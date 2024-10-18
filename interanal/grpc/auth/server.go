@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	ssov1 "github.com/sariya23/api/gen/go/sso"
+	ssov1 "github.com/sariya23/sso_proto/gen/sso"
 	"google.golang.org/grpc"
 )
 

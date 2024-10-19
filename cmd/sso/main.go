@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"sso/interanal/app"
 	"sso/interanal/config"
+	"syscall"
 )
 
 const (
@@ -26,7 +28,12 @@ func main() {
 	)
 
 	grpcApp := app.New(logger, config.GRPC.Port, "localhost@blalala", config.TokenTTL)
-	grpcApp.GrpcServer.MustRun()
+	go grpcApp.GrpcServer.MustRun()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	<-stop
+	grpcApp.GrpcServer.Stop()
+	logger.Info("application stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

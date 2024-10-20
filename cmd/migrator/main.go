@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"sso/interanal/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -12,17 +13,9 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type ConfigDataBase struct {
-	Port     string `yaml:"port"`
-	Host     string `yaml:"host"`
-	Name     string `yaml:"name"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-}
-
 func main() {
 	var migrationsPath, migrationsTable string
-	var cfg ConfigDataBase
+	var cfg config.ConfigDataBase
 	err := cleanenv.ReadConfig("config/db.yaml", &cfg)
 	if err != nil {
 		panic(err)
@@ -36,7 +29,7 @@ func main() {
 	}
 	m, err := migrate.New(
 		"file://"+migrationsPath,
-		fmt.Sprintf("pgx5://%s:%s@%s:%s/%s?x-migrations-table=%s&sslmode=disable", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, migrationsTable),
+		fmt.Sprintf("pgx5://%s:%s@%s:%s/%s?x-migrations-table=%s&sslmode=disable", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, migrationsTable),
 	)
 	if err != nil {
 		panic(err)

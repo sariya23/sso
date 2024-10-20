@@ -18,21 +18,23 @@ const (
 
 func main() {
 	ctx := context.Background()
-	config := config.MustLoad()
-	logger := setupLogger(config.Env)
+	cfg := config.MustLoad()
+	dbCfg := config.MustLoadDBConfig()
+	logger := setupLogger(cfg.Env)
 	logger.LogAttrs(
 		ctx,
 		slog.LevelInfo,
 		"starting application",
-		slog.String("with config", fmt.Sprintf("%+v", config)),
+		slog.String("with config", fmt.Sprintf("%+v", cfg)),
 	)
-
-	grpcApp := app.New(logger, config.GRPC.Port, "localhost@blalala", config.TokenTTL)
+	dbURL := fmt.Sprintf("postgres://%s:%s@db:%s/%s", dbCfg.User, dbCfg.Password, dbCfg.Port, dbCfg.DBName)
+	grpcApp := app.New(ctx, logger, cfg.GRPC.Port, dbURL, cfg.TokenTTL)
 	go grpcApp.GrpcServer.MustRun()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
 	grpcApp.GrpcServer.Stop()
+	grpcApp.Conn.Stop(ctx)
 	logger.Info("application stopped")
 }
 

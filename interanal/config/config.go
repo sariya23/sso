@@ -8,6 +8,14 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+type ConfigDataBase struct {
+	Port     string `yaml:"port"`
+	Host     string `yaml:"host"`
+	DBName   string `yaml:"db_name"`
+	User     string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
 type Config struct {
 	Env      string        `yaml:"env" env-required:"true"`
 	TokenTTL time.Duration `yaml:"token_ttl" env-required:"true"`
@@ -35,6 +43,15 @@ func MustLoad() *Config {
 	}
 
 	return &config
+}
+
+func MustLoadDBConfig() *ConfigDataBase {
+	var cfg ConfigDataBase
+	err := cleanenv.ReadConfig("./config/db.yaml", &cfg)
+	if err != nil {
+		panic(err)
+	}
+	return &cfg
 }
 
 // Priority: flag > env > default

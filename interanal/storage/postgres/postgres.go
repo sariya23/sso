@@ -17,14 +17,8 @@ type Storage struct {
 	connection *pgx.Conn
 }
 
-func MustNewConnection(ctx context.Context, dbURL string) (*Storage, func(s Storage)) {
+func MustNewConnection(ctx context.Context, dbURL string) *Storage {
 	const op = "storage.postgres.MustNewConnection"
-	cancel := func(s Storage) {
-		err := s.connection.Close(ctx)
-		if err != nil {
-			log.Fatalf("%s: cannot close connection: %v", op, err)
-		}
-	}
 	conn, err := pgx.Connect(ctx, dbURL)
 	if err != nil {
 		log.Fatalf("%s: cannot connect to db with URL: %s, with error: %v", op, dbURL, err)
@@ -33,7 +27,15 @@ func MustNewConnection(ctx context.Context, dbURL string) (*Storage, func(s Stor
 	if err != nil {
 		log.Fatalf("%s: db is unreacheble: %v", op, err)
 	}
-	return &Storage{connection: conn}, cancel
+	return &Storage{connection: conn}
+}
+
+func (s *Storage) Stop(ctx context.Context) {
+	const op = "storage.postgres.Stop"
+	err := s.connection.Close(ctx)
+	if err != nil {
+		log.Fatalf("%s: cannot close db connection: %v", op, err)
+	}
 }
 
 func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
@@ -52,7 +54,7 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	return userId, nil
 }
 
-func (s *Storage) GetUser(ctx context.Context, email string) (*models.User, error) {
+func (s *Storage) GetUser(ctx context.Context, email string) (models.User, error) {
 	const op = "storage.postgres.GetUser"
 	type Row struct {
 		id       int
@@ -64,12 +66,31 @@ func (s *Storage) GetUser(ctx context.Context, email string) (*models.User, erro
 	err := s.connection.QueryRow(ctx, stmt, email).Scan(&r.id, r.email, r.passHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, storage.ErrUserNotFound
+			return models.User{}, storage.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &models.User{Id: int64(r.id), Email: r.email, PaswordHash: r.passHash}, nil
+	return models.User{Id: int64(r.id), Email: r.email, PaswordHash: r.passHash}, nil
+}
+
+func (s *Storage) GetApp(ctx context.Context, appId int) (models.App, error) {
+	const op = "storage.postgres.GetApp"
+	type Row struct {
+		id     int
+		name   string
+		secret string
+	}
+	var r Row
+	stmt := `select app_id, name, secret from app where app_id=$1`
+	err := s.connection.QueryRow(ctx, stmt, appId).Scan(r.id, r.name, r.secret)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.App{}, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
+		}
+		return models.App{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return models.App{Id: r.id, Name: r.name, Secret: r.secret}, nil
 }
 
 func (s *Storage) IsAdmin(ctx context.Context, userId int64) (bool, error) {

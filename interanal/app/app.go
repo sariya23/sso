@@ -16,6 +16,7 @@ type App struct {
 
 func New(ctx context.Context, logger *slog.Logger, port int, db string, tokenTTL time.Duration) *App {
 	storage := postgres.MustNewConnection(ctx, db)
+	logger.Info("storage init successfully")
 	authService := auth.New(logger, storage, storage, storage, tokenTTL)
 	grpcApp := grpcapp.New(logger, authService, port)
 	return &App{

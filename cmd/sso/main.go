@@ -27,7 +27,7 @@ func main() {
 		"starting application",
 		slog.String("with config", fmt.Sprintf("%+v", cfg)),
 	)
-	dbURL := fmt.Sprintf("postgres://%s:%s@db:%s/%s", dbCfg.User, dbCfg.Password, dbCfg.Port, dbCfg.DBName)
+	dbURL := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s", dbCfg.User, dbCfg.Password, dbCfg.Port, dbCfg.DBName)
 	grpcApp := app.New(ctx, logger, cfg.GRPC.Port, dbURL, cfg.TokenTTL)
 	go grpcApp.GrpcServer.MustRun()
 	stop := make(chan os.Signal, 1)

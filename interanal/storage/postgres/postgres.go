@@ -7,6 +7,7 @@ import (
 	"log"
 	"sso/interanal/domain/models"
 	"sso/interanal/storage"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -19,13 +20,15 @@ type Storage struct {
 
 func MustNewConnection(ctx context.Context, dbURL string) *Storage {
 	const op = "storage.postgres.MustNewConnection"
+	ctx, cancel := context.WithTimeout(ctx, time.Second*4)
+	defer cancel()
 	conn, err := pgx.Connect(ctx, dbURL)
 	if err != nil {
 		log.Fatalf("%s: cannot connect to db with URL: %s, with error: %v", op, dbURL, err)
 	}
 	err = conn.Ping(ctx)
 	if err != nil {
-		log.Fatalf("%s: db is unreacheble: %v", op, err)
+		log.Fatalf("%s: db is unreachable: %v", op, err)
 	}
 	return &Storage{connection: conn}
 }

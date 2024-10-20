@@ -45,7 +45,7 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	const op = "storage.postgres.SaveUser"
 	var pgErr *pgconn.PgError
 	var userId int64
-	stmt := `insert into "user"(email, passHash) values ($1, $2) returning user_id`
+	stmt := `insert into "user"(email, pass_hash) values ($1, $2) returning user_id`
 	err := s.connection.QueryRow(ctx, stmt, email, passHash).Scan(&userId)
 	if err != nil {
 		if ok := errors.As(err, &pgErr); ok && pgErr.Code == pgerrcode.UniqueViolation {
@@ -66,15 +66,30 @@ func (s *Storage) GetUser(ctx context.Context, email string) (models.User, error
 	}
 	var r Row
 	stmt := `select user_id, email, pass_hash from "user" where email=$1`
-	err := s.connection.QueryRow(ctx, stmt, email).Scan(&r.id, r.email, r.passHash)
+	row := s.connection.QueryRow(ctx, stmt, email)
+	err := row.Scan(&r.id, &r.email, &r.passHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, storage.ErrUserNotFound
+			return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
 		}
 		return models.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return models.User{Id: int64(r.id), Email: r.email, PaswordHash: r.passHash}, nil
+}
+
+func (s *Storage) IsAdmin(ctx context.Context, userId int64) (bool, error) {
+	const op = "storage.postgres.IsAdmin"
+	var isAdmin bool
+	stmt := `select is_admin from "user" where user_id=$1`
+	err := s.connection.QueryRow(ctx, stmt, userId).Scan(&isAdmin)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+	return isAdmin, nil
 }
 
 func (s *Storage) GetApp(ctx context.Context, appId int) (models.App, error) {
@@ -96,16 +111,11 @@ func (s *Storage) GetApp(ctx context.Context, appId int) (models.App, error) {
 	return models.App{Id: r.id, Name: r.name, Secret: r.secret}, nil
 }
 
-func (s *Storage) IsAdmin(ctx context.Context, userId int64) (bool, error) {
-	const op = "storage.postgres.IsAdmin"
-	var isAdmin bool
-	stmt := `select id_admin from "users" where user_id=$1`
-	err := s.connection.QueryRow(ctx, stmt, userId).Scan(&isAdmin)
+func (s *Storage) truncateUsers(ctx context.Context) error {
+	stmt := `truncate "user"`
+	_, err := s.connection.Exec(ctx, stmt)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
-		}
-		return false, fmt.Errorf("%s: %w", op, err)
+		return err
 	}
-	return isAdmin, nil
+	return nil
 }

@@ -45,9 +45,9 @@ func MustLoad() *Config {
 	return &config
 }
 
-func MustLoadDBConfig() *ConfigDataBase {
+func MustLoadDBConfig(path string) *ConfigDataBase {
 	var cfg ConfigDataBase
-	err := cleanenv.ReadConfig("./config/db.yaml", &cfg)
+	err := cleanenv.ReadConfig(path, &cfg)
 	if err != nil {
 		panic(err)
 	}

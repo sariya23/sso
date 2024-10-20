@@ -19,7 +19,7 @@ const (
 func main() {
 	ctx := context.Background()
 	cfg := config.MustLoad()
-	dbCfg := config.MustLoadDBConfig()
+	dbCfg := config.MustLoadDBConfig("./config/db.yaml")
 	logger := setupLogger(cfg.Env)
 	logger.LogAttrs(
 		ctx,

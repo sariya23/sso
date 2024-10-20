@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/mail"
+	"sso/interanal/service/auth"
+	"sso/interanal/storage"
 
 	ssov1 "github.com/sariya23/sso_proto/gen/sso"
 	"google.golang.org/grpc"
@@ -54,6 +57,9 @@ func (s *ServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 
 	token, err := s.auth.Login(ctx, email, req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCreds) {
+			return nil, status.Error(codes.InvalidArgument, "invalid creds")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssov1.LoginResponse{
@@ -68,6 +74,9 @@ func (s *ServerAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 	}
 	userId, err := s.auth.RegisterNewUser(ctx, email, password)
 	if err != nil {
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssov1.RegisterResponse{
@@ -82,6 +91,9 @@ func (s *ServerAPI) IsAdmin(ctx context.Context, req *ssov1.IsAdminRequest) (*ss
 	}
 	isAdmin, err := s.auth.IsAdmin(ctx, userId)
 	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &ssov1.IsAdminResponse{

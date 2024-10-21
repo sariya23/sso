@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"errors"
+	"sso/interanal/service/auth"
 	"sso/tests/suite"
 	"testing"
 	"time"
@@ -19,6 +21,10 @@ const (
 	passDefaultLen = 10
 )
 
+// TestSuccessLogin проверяет, что
+//
+// - если пользователь существует и он указал верные креды, то
+// ему возвращается валидный jwt.
 func TestSuccessLogin(t *testing.T) {
 	ctx, suite := suite.New(t)
 	email := gofakeit.Email()
@@ -49,6 +55,34 @@ func TestSuccessLogin(t *testing.T) {
 	const deltaSeconds = 1
 
 	assert.InDelta(t, loginTime.Add(suite.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
+}
+
+// TestUserCannotRegiterTwice проверяет, что
+// пользователь с одним и тем же email
+// не может зарегистрироваться дважды.
+func TestUserCannotRegiterTwice(t *testing.T) {
+	ctx, suite := suite.New(t)
+	email := gofakeit.Email()
+	password := randomFakePssword()
+	resp, err := suite.AuthClient.Register(
+		ctx,
+		&ssov1.RegisterRequest{
+			Email:    email,
+			Password: password,
+		},
+	)
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp.GetUserId())
+
+	resp, err = suite.AuthClient.Register(
+		ctx,
+		&ssov1.RegisterRequest{
+			Email:    email,
+			Password: password,
+		},
+	)
+	require.ErrorIs(t, errors.Unwrap(err), auth.ErrUserExists)
+	require.Equal(t, resp.GetUserId(), int64(0))
 }
 
 func randomFakePssword() string {

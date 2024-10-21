@@ -12,17 +12,18 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
-	connection *pgx.Conn
+	connection *pgxpool.Pool
 }
 
 func MustNewConnection(ctx context.Context, dbURL string) *Storage {
 	const op = "storage.postgres.MustNewConnection"
 	ctx, cancel := context.WithTimeout(ctx, time.Second*4)
 	defer cancel()
-	conn, err := pgx.Connect(ctx, dbURL)
+	conn, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatalf("%s: cannot connect to db with URL: %s, with error: %v", op, dbURL, err)
 	}
@@ -34,11 +35,7 @@ func MustNewConnection(ctx context.Context, dbURL string) *Storage {
 }
 
 func (s *Storage) Stop(ctx context.Context) {
-	const op = "storage.postgres.Stop"
-	err := s.connection.Close(ctx)
-	if err != nil {
-		log.Fatalf("%s: cannot close db connection: %v", op, err)
-	}
+	s.connection.Close()
 }
 
 func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {

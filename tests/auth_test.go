@@ -58,6 +58,22 @@ func TestSuccessLogin(t *testing.T) {
 	assert.InDelta(t, loginTime.Add(suite.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
 }
 
+// TestSuccessRegister проверяет
+// успешную регистрацию нового пользователя.
+func TestSuccessRegister(t *testing.T) {
+	ctx, suite := suite.New(t)
+	email := gofakeit.Email()
+	password := randomFakePssword()
+	resRegister, err := suite.AuthClient.Register(
+		ctx,
+		&ssov1.RegisterRequest{
+			Email:    email,
+			Password: password,
+		})
+	require.NoError(t, err)
+	assert.NotEmpty(t, resRegister.GetUserId())
+}
+
 // TestUserCannotRegiterTwice проверяет, что
 // пользователь с одним и тем же email
 // не может зарегистрироваться дважды.

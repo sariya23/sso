@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"errors"
 	"sso/interanal/service/auth"
 	"sso/tests/suite"
 	"testing"
@@ -81,7 +80,8 @@ func TestUserCannotRegiterTwice(t *testing.T) {
 			Password: password,
 		},
 	)
-	require.ErrorIs(t, errors.Unwrap(err), auth.ErrUserExists)
+
+	require.ErrorContains(t, err, auth.ErrUserExists.Error())
 	require.Equal(t, resp.GetUserId(), int64(0))
 }
 

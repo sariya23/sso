@@ -11,6 +11,8 @@ import (
 	ssov1 "github.com/sariya23/sso_proto/gen/sso"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -83,6 +85,41 @@ func TestUserCannotRegiterTwice(t *testing.T) {
 
 	require.ErrorContains(t, err, auth.ErrUserExists.Error())
 	require.Equal(t, resp.GetUserId(), int64(0))
+}
+
+// TestCannotRegisterUserWithInvalidCreds проверяет,
+// что пользователь не может зарегистрироваться, если:
+//
+// - если не указал email;
+//
+// - если не указал пароль;
+//
+// - если указал невалидный email. Например, abobus-t.
+func TestCannotRegisterUserWithInvalidCreds(t *testing.T) {
+	ctx, suite := suite.New(t)
+	testCases := []struct {
+		caseName        string
+		email, password string
+		expectedErr     error
+	}{
+		{"Blank email", "", "qwe", status.Error(codes.InvalidArgument, "email is invalid")},
+		{"Blank password", gofakeit.Email(), "", status.Error(codes.InvalidArgument, "password is required")},
+		{"Invalid email", "abobus-t", "qwe", status.Error(codes.InvalidArgument, "email is invalid")},
+	}
+
+	for _, ts := range testCases {
+		t.Run(ts.caseName, func(t *testing.T) {
+			resp, err := suite.AuthClient.Register(
+				ctx,
+				&ssov1.RegisterRequest{
+					Email:    ts.email,
+					Password: ts.password,
+				},
+			)
+			require.Equal(t, resp.GetUserId(), int64(0))
+			require.ErrorIs(t, err, ts.expectedErr)
+		})
+	}
 }
 
 func randomFakePssword() string {

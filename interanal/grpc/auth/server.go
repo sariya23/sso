@@ -74,8 +74,8 @@ func (s *ServerAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 	}
 	userId, err := s.auth.RegisterNewUser(ctx, email, password)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserExists) {
-			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		if errors.Is(err, auth.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, auth.ErrUserExists.Error())
 		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}

@@ -82,6 +82,27 @@ func TestCannotLoginUserWithInvalidCreds(t *testing.T) {
 	}
 }
 
+// TestConnotLoginInNonExistentApp проверяет, что
+// пользователь не может залогиниться в
+// несуществующие приложение.
+func TestConnotLoginInNonExistentApp(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	password := randomFakePssword()
+	resRegister, err := st.AuthClient.Register(
+		ctx,
+		&ssov1.RegisterRequest{
+			Email:    email,
+			Password: password,
+		})
+	require.NoError(t, err)
+	assert.NotEmpty(t, resRegister.GetUserId())
+
+	resp, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{Email: email, Password: password, AppId: 99999})
+	assert.Nil(t, resp)
+	require.ErrorIs(t, err, status.Error(codes.Internal, "internal error"))
+}
+
 // TestSuccessRegister проверяет
 // успешную регистрацию нового пользователя.
 func TestSuccessRegister(t *testing.T) {

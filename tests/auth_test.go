@@ -27,10 +27,10 @@ const (
 // - если пользователь существует и он указал верные креды, то
 // ему возвращается валидный jwt.
 func TestSuccessLogin(t *testing.T) {
-	ctx, suite := suite.New(t)
+	ctx, st := suite.New(t)
 	email := gofakeit.Email()
 	password := randomFakePssword()
-	resRegister, err := suite.AuthClient.Register(
+	resRegister, err := st.AuthClient.Register(
 		ctx,
 		&ssov1.RegisterRequest{
 			Email:    email,
@@ -39,7 +39,7 @@ func TestSuccessLogin(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, resRegister.GetUserId())
 
-	resLogin, err := suite.AuthClient.Login(ctx, &ssov1.LoginRequest{Email: email, Password: password, AppId: appId})
+	resLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{Email: email, Password: password, AppId: appId})
 	require.NoError(t, err)
 	loginTime := time.Now()
 	token := resLogin.GetToken()
@@ -55,7 +55,31 @@ func TestSuccessLogin(t *testing.T) {
 	assert.Equal(t, appId, int(claims["app_id"].(float64)))
 	const deltaSeconds = 1
 
-	assert.InDelta(t, loginTime.Add(suite.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
+	assert.InDelta(t, loginTime.Add(st.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
+}
+
+// TestCannotLoginUserWithInvalidCreds проверяет,
+// что пользователь не может залогиниться, если он указал
+// неверные креды.
+func TestCannotLoginUserWithInvalidCreds(t *testing.T) {
+	testCases := []struct {
+		caseName    string
+		email       string
+		password    string
+		expectedErr error
+	}{
+		{"User not found", gofakeit.Email(), "qwe", status.Error(codes.InvalidArgument, "invalid creds")},
+		{"Blank email", "", "qwe", status.Error(codes.InvalidArgument, "email is invalid")},
+		{"Blank pasword", gofakeit.Email(), "", status.Error(codes.InvalidArgument, "password is required")},
+	}
+	for _, ts := range testCases {
+		t.Run(ts.caseName, func(t *testing.T) {
+			ctx, st := suite.New(t)
+			resp, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{Email: ts.email, Password: ts.password, AppId: appId})
+			assert.Nil(t, resp)
+			require.ErrorIs(t, err, ts.expectedErr)
+		})
+	}
 }
 
 // TestSuccessRegister проверяет

@@ -72,26 +72,26 @@ func (a *AuthService) Login(
 
 	user, err := a.userProvider.GetUser(ctx, email)
 	if errors.Is(err, storage.ErrUserNotFound) {
-		a.logger.Warn("user not found")
+		logger.Warn("user not found")
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCreds)
 	}
 	if err != nil {
-		a.logger.Error("failed to get user", slog.String("err", err.Error()))
+		logger.Error("failed to get user", slog.String("err", err.Error()))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PaswordHash, []byte(password)); err != nil {
-		a.logger.Warn("invalid creds")
+		logger.Warn("invalid creds")
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCreds)
 	}
 
 	app, err := a.appServiceProvider.GetApp(ctx, appId)
 	if errors.Is(err, storage.ErrAppNotFound) {
-		a.logger.Warn("app not found")
+		logger.Warn("app not found")
 		return "", fmt.Errorf("%s: %w", op, ErrAppNotFound)
 	}
 	if err != nil {
-		a.logger.Error("failed to get app", slog.String("err", err.Error()))
+		logger.Error("failed to get app", slog.String("err", err.Error()))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 	logger.Info("user logged successfully")

@@ -1,0 +1,5 @@
+port: 5432
+host: "db"
+db_name: "db"
+username: "admin"
+password: "1234"

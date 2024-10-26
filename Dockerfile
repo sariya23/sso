@@ -7,4 +7,3 @@ COPY . .
 EXPOSE 8082
 RUN apk update
 RUN apk add make 
-CMD ["make",  "run"]
